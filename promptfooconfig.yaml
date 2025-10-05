@@ -12,7 +12,7 @@ prompts:
 providers:
   - "openai:gpt-4o-mini"
   - "openai:gpt-4"
-  
+  - "anthropic:claude-3-5-sonnet-latest" 
 
 tests:
   - vars:
