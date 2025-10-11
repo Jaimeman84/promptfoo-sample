@@ -2,7 +2,7 @@
 
 # Learn more about building a configuration: https://promptfoo.dev/docs/configuration/guide
 
-description: "My eval"
+description: "PromptFoo Sample Config"
 
 prompts:
   - "Write a tweet about {{topic}}"
@@ -10,9 +10,10 @@ prompts:
   
 
 providers:
-  - "openai:gpt-4o-mini"
-  - "openai:gpt-4"
-  - "anthropic:claude-3-5-sonnet-latest" 
+  # - "openai:gpt-4o-mini"
+  # - "openai:gpt-4"
+  # - "anthropic:claude-3-5-sonnet-latest"
+  - google:gemini-2.5-flash 
 
 tests:
   - vars:

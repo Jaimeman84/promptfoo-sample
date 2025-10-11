@@ -1,0 +1,6 @@
+# List of providers to test prompts against
+- id: openai:gpt-3.5-turbo
+- id: openai:gpt-4
+# Uncomment to use Anthropic models
+# - "anthropic:claude-3-opus"
+# - "anthropic:claude-3-sonnet"

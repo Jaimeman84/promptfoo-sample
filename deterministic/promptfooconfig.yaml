@@ -1,0 +1,517 @@
+providers:
+  - id: openai:gpt-4o-mini
+
+defaultTest:
+  options:
+    temperature: 0
+    max_tokens: 300
+    seed: 42
+    logprobs: true  # Enable logprobs
+    top_logprobs: 5  # Return top 5 alternatives for each token
+
+prompts:
+  - You are a precise assistant that follows instructions exactly. Here is the {{task}}
+  - You are a precise assistant that follows instructions exactly but makes them brief. Here is the {{task}}
+
+tests:
+  # 1. assert-set - Group multiple assertions with threshold
+  - description: "assert-set: Groups multiple checks together. Passes if at least 2 out of 3 conditions are met (67%). Useful when you want some flexibility - not everything has to be perfect, just most things."
+    vars:
+      task: "List three European capitals: Paris, Berlin, and Madrid."
+    assert:
+      - type: assert-set
+        threshold: 0.67  # At least 67% (2/3) must pass
+        assert:
+          - type: contains
+            value: "Paris"
+          - type: contains
+            value: "Berlin"
+          - type: contains
+            value: "Tokyo"  # This will fail, but we only need 2/3
+
+  # 2. classifier - HuggingFace sentiment classifier
+  # - description: "classifier: Uses AI to analyze the mood or feeling of the response. Checks if the text is positive, negative, or neutral. Like having a robot read the text and tell you if it sounds happy or sad."
+  #   vars:
+  #     task: "Write a positive review: This product exceeded all my expectations! Absolutely wonderful experience."
+  #   assert:
+  #     - type: classifier
+  #       model: "distilbert-base-uncased-finetuned-sst-2-english"
+  #       label: "POSITIVE"
+  #       threshold: 0.85
+
+  # 3. contains - Output contains substring
+  - description: "contains: Looks for a specific word or phrase somewhere in the response. It's like using Ctrl+F to find text on a webpage - if the text appears anywhere, it passes."
+    vars:
+      task: "Say the phrase: The quick brown fox jumps over the lazy dog."
+    assert:
+      - type: contains
+        value: "quick brown fox"
+
+  # 4. contains-all - Output contains all listed substrings
+  - description: "contains-all: Makes sure ALL of the listed words or phrases appear in the response. Like a checklist - every item must be found for this test to pass."
+    vars:
+      task: "List pizza toppings: cheese, pepperoni, mushrooms, and olives."
+    assert:
+      - type: contains-all
+        value:
+          - "cheese"
+          - "pepperoni"
+          - "mushrooms"
+          - "olives"
+
+  # 5. contains-any - Output contains at least one substring
+  - description: "contains-any: Passes if at least ONE of the listed words appears. Like multiple choice - you just need to mention any one of these options for success."
+    vars:
+      task: "Name a popular programming language used for web development."
+    assert:
+      - type: contains-any
+        value:
+          - "Python"
+          - "JavaScript"
+          - "TypeScript"
+          - "Ruby"
+          - "PHP"
+
+  # 6. contains-json - Output contains valid JSON
+  - description: "contains-json: Checks if there's valid JSON data anywhere in the response. JSON is a way to structure data with curly braces {}. Like finding a properly formatted address book entry in a letter."
+    vars:
+      task: |
+        Respond with: The user data is {"name": "Alice", "age": 30, "active": true}
+    assert:
+      - type: contains-json
+
+  # 7. contains-sql - Output contains valid SQL
+  - description: "contains-sql: Looks for a valid database query (SQL) in the response. SQL is how we talk to databases. This makes sure the AI wrote a real, working database command."
+    vars:
+      task: |
+        Say: To get all users, run: SELECT * FROM users WHERE status = 'active';
+    assert:
+      - type: contains-sql
+
+  # 8. contains-xml - Output contains valid XML
+  - description: "contains-xml: Checks for valid XML code in the response. XML is like HTML - it uses tags with angle brackets <like> <this>. Makes sure the format is correct and could be read by a computer."
+    vars:
+      task: |
+        Reply with: The config is <settings><mode>production</mode><debug>false</debug></settings>
+    assert:
+      - type: contains-xml
+
+  # 9. cost - Inference cost must be below threshold
+  - description: "cost: Makes sure the AI's response didn't cost too much money. Each AI call costs a tiny amount - this checks that we stayed under budget. Like having a spending limit at the store."
+    vars:
+      task: "Reply with a brief: OK"
+    assert:
+      - type: cost
+        threshold: 0.01  # $0.01 maximum
+
+  # 10. equals - Output matches exactly
+  - description: "equals: The response must match EXACTLY - every letter, space, and punctuation mark. No extra words, no missing letters. Like copying text perfectly with no mistakes."
+    vars:
+      task: "Reply with exactly this text, nothing more: SUCCESS"
+    assert:
+      - type: equals
+        value: "SUCCESS"
+
+  # 11. f-score - F-score similarity above threshold
+  - description: "f-score: Measures how similar two pieces of text are by counting matching words. A score of 0.4 means 40% similar. Like comparing two essays to see how many of the same words they use."
+    vars:
+      task: "Explain what machine learning is in simple terms."
+    assert:
+      # Track binary classification metrics
+      - type: javascript
+        value: 'output.sentiment === context.vars.sentiment'
+        metric: accuracy
+      # For F1 score components (treating 'positive' as the positive class)
+      - type: javascript
+        value: "output.sentiment === 'positive' && context.vars.sentiment === 'positive' ? 1 : 0"
+        metric: true_positives
+        weight: 0
+
+      - type: javascript
+        value: "output.sentiment === 'positive' && context.vars.sentiment === 'negative' ? 1 : 0"
+        metric: false_positives
+        weight: 0
+
+      - type: javascript
+        value: "output.sentiment === 'negative' && context.vars.sentiment === 'positive' ? 1 : 0"
+        metric: false_negatives
+        weight: 0
+
+      - type: javascript
+        value: "output.sentiment === 'negative' && context.vars.sentiment === 'negative' ? 1 : 0"
+        metric: true_negatives
+        weight: 0
+
+  # 12. finish-reason - Model stopped for expected reason
+  - description: "finish-reason: Checks WHY the AI stopped talking. Did it finish naturally (stop), run out of space (length), or hit a safety filter (content_filter)? Like knowing if someone stopped talking because they finished or were interrupted."
+    vars:
+      task: "Say: Complete"
+    assert:
+      - type: finish-reason
+        value: "stop"
+
+  # 13. icontains - Case-insensitive substring match
+  - description: "icontains: Looks for text but doesn't care about UPPERCASE or lowercase. 'HELLO', 'hello', and 'HeLLo' are all treated the same. Like searching without worrying about caps lock."
+    vars:
+      task: "Reply with: PROMPTFOO is amazing for testing."
+    assert:
+      - type: icontains
+        value: "promptfoo"
+
+  # 14. icontains-all - Case-insensitive contains all
+  - description: "icontains-all: Makes sure ALL listed words appear, ignoring uppercase/lowercase. Combines the 'find everything' rule with 'ignore capitalization'. Every word must be there in any capitalization."
+    vars:
+      task: "Say: Python, JAVASCRIPT, and Ruby are programming languages."
+    assert:
+      - type: icontains-all
+        value:
+          - "python"
+          - "javascript"
+          - "RUBY"
+
+  # 15. icontains-any - Case-insensitive contains any
+  - description: "icontains-any: Passes if ANY of the words appear, ignoring uppercase/lowercase. You just need one match and capitalization doesn't matter. Most flexible text search option."
+    vars:
+      task: "Say: I prefer TypeScript for my projects."
+    assert:
+      - type: icontains-any
+        value:
+          - "PYTHON"
+          - "typescript"
+          - "JAVA"
+
+  # 16. is-json - Output is valid JSON with optional schema
+  - description: "is-json: The ENTIRE response must be valid JSON - nothing else allowed. Like submitting a form that must be perfectly filled out with no extra notes in the margins."
+    vars:
+      task: |
+        Return ONLY valid JSON with this structure:
+        {"status": "success", "code": 200, "data": {"user": "test"}}
+    assert:
+      - type: is-json
+
+  # 17. is-json with schema validation
+  - description: "is-json with schema: Not only must it be valid JSON, but it must follow a specific structure. Like a form that requires exactly these fields: name (text), age (number), email (text). Missing or extra fields fail."
+    vars:
+      task: |
+        Return ONLY this JSON:
+        {"name": "John", "age": 25, "email": "john@example.com"}
+    assert:
+      - type: is-json
+        schema:
+          type: object
+          required: ["name", "age", "email"]
+          properties:
+            name:
+              type: string
+            age:
+              type: number
+            email:
+              type: string
+
+  # 18. is-sql - Output is valid SQL statement
+  - description: "is-sql: The entire response must be a working database query with no extra text. Like writing a command that a database could actually run. No explanations, just the SQL code."
+    vars:
+      task: |
+        Return ONLY this SQL query:
+        SELECT id, name, email FROM users WHERE created_at > '2024-01-01' ORDER BY name;
+    assert:
+      - type: is-sql
+
+  # 19. Multiple assertions on same test
+  - description: "combined checks: Runs several different tests on the same response. All conditions must pass. Like grading a paper on spelling, grammar, AND content - everything has to be good."
+    vars:
+      task: "Say: The API returned status code 200 with message: SUCCESS"
+    assert:
+      - type: contains
+        value: "200"
+      - type: icontains
+        value: "success"
+      - type: contains-any
+        value:
+          - "ERROR"
+          - "SUCCESS"
+          - "PENDING"
+
+  # 20. Edge case - Empty/minimal response
+  - description: "minimal response test: Tests how the AI handles very short requests. Makes sure it can be brief when asked and doesn't ramble. Also checks the cost stays super low for simple tasks."
+    vars:
+      task: "Reply with just: OK"
+    assert:
+      - type: equals
+        value: "OK"
+      - type: cost
+        threshold: 0.005
+
+  # 21. Complex JSON validation
+  - description: "complex JSON structure: Tests if the AI can create nested JSON (JSON inside JSON). Like organizing folders within folders on your computer. Also verifies specific data appears inside."
+    vars:
+      task: |
+        Return ONLY this JSON:
+        {
+          "users": [
+            {"id": 1, "name": "Alice"},
+            {"id": 2, "name": "Bob"}
+          ],
+          "total": 2
+        }
+    assert:
+      - type: is-json
+      - type: contains
+        value: "Alice"
+
+  # 22. SQL with multiple statements
+  - description: "multiple SQL commands: Checks if the AI can write several database commands in one response. Like giving someone a recipe with multiple steps - all steps must be valid SQL."
+    vars:
+      task: |
+        Explain: First run CREATE TABLE users (id INT, name VARCHAR(100)); 
+        then execute INSERT INTO users VALUES (1, 'Alice');
+    assert:
+      - type: contains-sql
+      - type: contains
+        value: "CREATE TABLE"
+
+  # 23. XML with attributes
+  - description: "XML with extra info: Tests if the AI can write XML tags that include attributes (extra information in the tag). Like HTML tags with class names or IDs - more advanced XML structure."
+    vars:
+      task: |
+        Say: The config is <server host="localhost" port="8080"><ssl enabled="true"/></server>
+    assert:
+      - type: contains-xml
+      - type: contains
+        value: "localhost"
+
+  # 24. Negative cost test (should always pass)
+  - description: "generous budget test: Gives the AI a large budget ($1) to work with. Tests longer responses to see the cost stays reasonable even with more words. Should easily pass with normal responses."
+    vars:
+      task: "Generate a longer response about the benefits of automated testing in software development."
+    assert:
+      - type: cost
+        threshold: 1.0  # Very generous $1 threshold
+
+  # 25. is-valid-function-call - Validate function call against JSON schema
+  - description: "is-valid-function-call: Checks if the AI properly formatted a function call. Like making sure someone filled out a form correctly - the function name and all required information must be in the right format."
+    vars:
+      task: |
+        Return ONLY this function call:
+        {"name": "get_weather", "arguments": {"location": "San Francisco", "unit": "celsius"}}
+    assert:
+      - type: is-valid-function-call
+        value:
+          type: object
+          properties:
+            name:
+              type: string
+              enum: ["get_weather"]
+            arguments:
+              type: object
+              required: ["location"]
+              properties:
+                location:
+                  type: string
+                unit:
+                  type: string
+                  enum: ["celsius", "fahrenheit"]
+
+  # 26. is-valid-openai-function-call - OpenAI function call validation
+  - description: "is-valid-openai-function-call: Validates function calls specifically for OpenAI's format. Like checking if a letter follows the post office's exact addressing rules - it must match OpenAI's special requirements."
+    vars:
+      task: |
+        Return ONLY this function call:
+        {"name": "search_database", "arguments": {"query": "users", "limit": 10}}
+    assert:
+      - type: is-valid-openai-function-call
+        value:
+          name: search_database
+          parameters:
+            type: object
+            required: ["query"]
+            properties:
+              query:
+                type: string
+              limit:
+                type: integer
+
+  # 27. is-valid-openai-tools-call - OpenAI tools call validation
+  - description: "is-valid-openai-tools-call: Validates OpenAI's tools format which can include multiple function calls at once. Like checking a shopping list where each item has a specific format - ID, type, and the function details."
+    vars:
+      task: |
+        Return ONLY this tool call:
+        [{"id": "call_123", "type": "function", "function": {"name": "get_user", "arguments": "{\"user_id\": 42}"}}]
+    assert:
+      - type: is-valid-openai-tools-call
+        value:
+          - type: function
+            function:
+              name: get_user
+              parameters:
+                type: object
+                required: ["user_id"]
+                properties:
+                  user_id:
+                    type: integer
+
+  # 28. is-xml - Output is valid XML
+  - description: "is-xml: The entire response must be properly formatted XML with opening and closing tags. Like making sure an HTML page is written correctly - all tags must match and nest properly."
+    vars:
+      task: |
+        Return ONLY this XML:
+        <?xml version="1.0"?>
+        <response>
+          <status>success</status>
+          <data>
+            <user id="1">Alice</user>
+          </data>
+        </response>
+    assert:
+      - type: is-xml
+
+  # 29. javascript - Custom JavaScript validation function
+  - description: "javascript: Runs custom code you write to check the response. Like creating your own grading rubric - you can test anything you want by writing JavaScript code that returns pass/fail."
+    vars:
+      task: "Generate a number between 50 and 100."
+    assert:
+      - type: javascript
+        value: |
+          const num = parseInt(output.match(/\d+/)?.[0]);
+          if (num >= 50 && num <= 100) {
+            return { pass: true, score: 1.0, reason: `Number ${num} is in range` };
+          }
+          return { pass: false, score: 0, reason: `Number ${num} is out of range` };
+
+  # 30. latency - Response time must be below threshold
+  - description: "latency: Measures how fast the AI responded. Tests that the answer came back within a time limit (5 seconds here). Like having a rule that your pizza must arrive in 30 minutes or less."
+    vars:
+      task: "Reply with: Fast"
+    assert:
+      - type: latency
+        threshold: 5000  # 5000 milliseconds (5 seconds)
+
+  # 31. levenshtein - Edit distance below threshold
+  - description: "levenshtein: Counts how many letter changes are needed to match the expected text. If 'cat' should be 'car', that's 1 change. Allows small typos or differences. Like spell-check that accepts close-enough answers."
+    vars:
+      task: "Say: The quick brown fox"
+    assert:
+      - type: levenshtein
+        value: "The quick brown fox"
+        threshold: 5  # Allow up to 5 character edits
+
+  # # 32. perplexity-score - Normalized perplexity check
+  # - description: "perplexity-score: Measures how 'natural' or 'predictable' the text sounds. Lower scores mean more natural language. Like checking if someone sounds like a robot or a real person - normal speech should score low."
+  #   vars:
+  #     task: "Write a natural sentence about the weather."
+  #   assert:
+  #     - type: perplexity-score
+  #       threshold: 1.5  # Lower is better, more natural
+
+  # # 33. perplexity - Perplexity below threshold
+  # - description: "perplexity: Raw measure of text predictability. Higher numbers mean the text is surprising or unusual. Tests that the writing isn't too weird or unexpected. Like checking if someone is using normal everyday language."
+  #   vars:
+  #     task: "Write a coherent sentence about technology."
+  #   assert:
+  #     - type: perplexity
+  #       threshold: 50  # Raw perplexity threshold
+
+  # # 34. pi - Pi Labs scorer validation
+  # - description: "pi: Uses Pi Labs' AI scoring system to grade responses on different qualities like coherence (does it make sense), relevance, or accuracy. Like having a professional grader score an essay on specific criteria."
+  #   vars:
+  #     task: "Explain quantum computing in simple terms."
+  #   assert:
+  #     - type: pi
+  #       scorer: "coherence"
+  #       threshold: 0.7
+
+  # 35. python - Custom Python validation function
+  - description: "python: Runs custom Python code you write to test the response. Like JavaScript validation but in Python. Great if you're more comfortable with Python or need Python-specific tools to check the answer."
+    vars:
+      task: "Generate a list of three colors."
+    assert:
+      - type: python
+        value: |
+          colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange']
+          output_lower = output.lower()
+          found = sum(1 for color in colors if color in output_lower)
+          if found >= 3:
+              return {'pass': True, 'score': 1.0, 'reason': f'Found {found} colors'}
+          return {'pass': False, 'score': 0, 'reason': f'Only found {found} colors'}
+
+  # 36. regex - Output matches regular expression
+  - description: "regex: Tests if the response matches a pattern using regular expressions. Regex is like a super-powered search that can find patterns (like email formats or phone numbers) instead of just exact words."
+    vars:
+      task: "Reply with an email address format: user@example.com"
+    assert:
+      - type: regex
+        value: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+
+  # 37. rouge-n - Rouge-N score above threshold
+  - description: "rouge-n: Compares word sequences (like pairs or triplets of words) between two texts. Used often for testing summaries - checks if the summary uses similar word combinations as the original."
+    vars:
+      task: "Summarize: Machine learning helps computers learn from data."
+    assert:
+      - type: rouge-n
+        value: "machine learning enables computers to learn from data"
+        threshold: 0.6
+        n: 2  # bigrams
+
+  # 38. select-best - Best output among multiple options
+  - description: "select-best: Compares the AI's response to multiple acceptable answers and checks if it matches the best one. Like a multiple choice test where you need to pick the best answer, not just any correct one."
+    vars:
+      task: "Write a professional greeting."
+    assert:
+      - type: select-best
+        value: "choose the best greeting"
+
+  # 39. similar - Embedding similarity above threshold
+  - description: "similar: Uses AI to check if two texts mean the same thing, even if they use different words. Like knowing 'I'm hungry' and 'I want food' mean the same thing. Tests semantic meaning, not just matching words."
+    vars:
+      task: "Explain what AI is."
+    assert:
+      - type: similar
+        value: "Artificial intelligence is technology that enables machines to think"
+        threshold: 0.8
+
+  # 40. starts-with - Output begins with string
+  - description: "starts-with: The response must begin with specific words or phrases. Like requiring all formal letters to start with 'Dear Sir or Madam'. Only checks the very beginning of the text."
+    vars:
+      task: "Begin your response with 'Certainly,' and then explain something."
+    assert:
+      - type: starts-with
+        value: "Certainly,"
+
+  # # 41. trace-span-count - Count spans matching patterns
+  # - description: "trace-span-count: Counts how many times certain operations happened during the AI's process. Advanced testing that tracks internal steps. Like counting how many times a recipe says to stir or how many API calls were made."
+  #   vars:
+  #     task: "Process this request and make multiple API calls."
+  #   assert:
+  #     - type: trace-span-count
+  #       min: 2
+  #       max: 10
+  #       pattern: "api_call_*"
+
+  # # 42. trace-span-duration - Check span durations with percentiles
+  # - description: "trace-span-duration: Measures how long internal operations took. Percentile means we check if 95% of operations finished within the time limit. Like checking if 95% of your app's features load in under 1 second."
+  #   vars:
+  #     task: "Execute a fast operation."
+  #   assert:
+  #     - type: trace-span-duration
+  #       pattern: "operation_*"
+  #       percentile: 95
+  #       threshold: 1000  # milliseconds
+
+  # #43. trace-error-spans - Detect errors in traces
+  # - description: "trace-error-spans: Looks for errors that happened during the AI's processing. Checks for specific error codes (like 500 errors) or error types. Like checking security camera footage for any incidents that occurred."
+  #   vars:
+  #     task: "Complete this task successfully."
+  #   assert:
+  #     - type: trace-error-spans
+  #       statusCodes: [500, 503]
+  #       attributes:
+  #         error.type: "timeout"
+  #       maxErrors: 0
+
+  # # 44. webhook - External webhook validation
+  # - description: "webhook: Sends the AI's response to another website/service for validation. Like having an external expert review the work. The other service returns pass or fail, giving you flexible custom validation."
+  #   vars:
+  #     task: "Generate a response that meets quality criteria."
+  #   assert:
+  #     - type: webhook
+  #       value: "https://api.example.com/validate"  # Would return {pass: true/false}description: "Complete PromptFoo Deterministic Assertions Test Suite"

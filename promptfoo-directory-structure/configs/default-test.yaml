@@ -1,0 +1,8 @@
+# Default test configuration - assertions applied to all tests unless overridden
+
+# assert:
+#   - type: llm-rubric
+#       value: "Response should be helpful and accurate"
+  
+#   - type: javascript
+#       value: "output.length > 10 && output.length < 500"

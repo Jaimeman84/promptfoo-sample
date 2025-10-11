@@ -1,0 +1,20 @@
+# Math-specific test cases
+
+  - description: "Basic arithmetic"
+    vars:
+      question: "What is 15 + 27?"  
+      messages:
+        - role: user
+          content: "What is 15 + 27?"
+    # assert:
+    #   - type: icontains
+    #     value: "42"
+    #   - type: javascript
+    #     value: /42/.test(output)
+
+  # - description: "Word problems"
+  # - vars:
+  #     question: "If Sarah has 3 apples and gives away 1, how many does she have left?"
+    # assert:
+    #   - type: icontains
+    #     value: "2"

@@ -1,0 +1,7 @@
+- vars:
+    issue: "I can't install your software. I keep getting an error message that says 'Installation failed: Error code 1603'"
+  assert:
+    - type: icontains
+      value: installation
+    - type: llm-rubric
+      value: ensure the response provides clear troubleshooting steps

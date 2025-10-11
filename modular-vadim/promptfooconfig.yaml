@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: "File-based prompt demo"
+
+providers:
+  - file://providers/providers.yaml
+
+prompts:
+  # Each entry pulls a template from an external text file
+  - file://prompts/customer_service.txt
+  - file://prompts/technical_support.txt
+
+tests:
+  - file://tests/common/*.yaml

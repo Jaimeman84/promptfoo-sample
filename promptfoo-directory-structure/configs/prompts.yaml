@@ -1,0 +1,14 @@
+# Prompts configuration - defines all prompt templates
+
+# Prompt from external text file
+  # - file://prompts/system-message.txt
+
+# Prompt from external text file
+  # - file://prompts/user-prompt.txt
+
+# Inline prompt definition
+- id: custom-prompt
+  label: "Custom Prompt"
+  raw: |
+    You are a helpful assistant. Please answer the following question:
+    {{question}}

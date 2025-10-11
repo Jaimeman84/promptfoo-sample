@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: "Main evaluation configuration - orchestrates all other configs"
+
+# Reference the prompts configuration file
+prompts: 
+  - file://configs/prompts.yaml
+
+# Reference the providers configuration file
+providers: 
+  - file://configs/providers.yaml
+
+# Reference all test files in the tests directory
+tests: 
+  - file://tests/**/*.yaml
+
+# Reference default test assertions
+# defaultTest: file://configs/default-test.yaml

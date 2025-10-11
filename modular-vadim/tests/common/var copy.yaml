@@ -1,0 +1,9 @@
+- vars:
+    issue: "I forgot my password and the password reset email never arrives"
+  assert:
+    - type: icontains
+      value: password
+    - type: icontains
+      value: reset
+    - type: llm-rubric
+      value: ensure the response is empathetic and helpful
